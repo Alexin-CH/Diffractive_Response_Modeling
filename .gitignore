@@ -1,0 +1,12 @@
+venv/
+__pycache__/
+logs/
+loss_img/
+model_pt/
+difference_img/
+fields_img/
+
+*.pkl
+*.pt
+
+*.log
