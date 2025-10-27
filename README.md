@@ -37,6 +37,12 @@ cd Diffractive_Response_Modeling
 Install the required dependencies:
 
 ```bash
+make venv
+```
+
+or
+
+```bash
 pip install -r requirements.txt
 ```
 
