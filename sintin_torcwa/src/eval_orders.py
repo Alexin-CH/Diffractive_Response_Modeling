@@ -64,7 +64,7 @@ def eval_orders(order_list, angle_deg):
         wl = 1500
         tqdm_order.set_description(f"Simulating orders={order}")
         freq = 1.0 / wl
-        sim = torcwa.rcwa(freq=freq, order=[order, order], L=[Lx, Ly], 
+        sim = torcwa.rcwa(freq=freq, order=[0, order], L=[Lx, Ly], 
                           dtype=sim_dtype, device=device)
         sim.add_input_layer(eps=eps_air)            # superstrate (air)
         sim.add_output_layer(eps=eps_sub)           # substrate (SiO2)
@@ -104,7 +104,7 @@ def eval_orders(order_list, angle_deg):
     return np.array(R_list), np.array(T_list), np.array(time_list)
 
 # Example: compute spectrum at 30° incidence from 800 to 2000 nm
-orders = np.arange(0, 13) # Orders from 0 to 10
+orders = np.arange(0, 50) # Orders from 0 to 10
 R_spec, T_spec, times = eval_orders(orders, inc_angle_deg)
 
 # Find the polynomial fit for computation times
@@ -123,19 +123,17 @@ cubic_error = np.mean((times - cubic_fit(orders))**2)
 quartic_error = np.mean((times - quartic_fit(orders))**2)
 
 # Plot computation times for each order
-# plt.figure(figsize=(6,4))
-# plt.plot(orders, times, marker='o', label='Computation Time')
-# plt.plot(orders, quadratic_fit(orders), label=f"Quadratic Fit (error={quadratic_error:.5f})", linestyle='--')
-# plt.plot(orders, cubic_fit(orders), label=f"Cubic Fit (error={cubic_error:.5f})", linestyle='--')
-# plt.plot(orders, quartic_fit(orders), label=f"Quartic Fit (error={quartic_error:.5f})", linestyle='--')
-# plt.title("Computation Time vs Order")
-# plt.xlabel("Order")
-# plt.ylabel("Time (seconds)")
-# plt.legend()
-# plt.grid()
-# plt.show()
-
-#exit(0)  # Exit after plotting computation times
+plt.figure(figsize=(6,4))
+plt.plot(orders, times, marker='o', label='Computation Time')
+plt.plot(orders, quadratic_fit(orders), label=f"Quadratic Fit (error={quadratic_error:.5f})", linestyle='--')
+plt.plot(orders, cubic_fit(orders), label=f"Cubic Fit (error={cubic_error:.5f})", linestyle='--')
+plt.plot(orders, quartic_fit(orders), label=f"Quartic Fit (error={quartic_error:.5f})", linestyle='--')
+plt.title("Computation Time vs Order")
+plt.xlabel("Order")
+plt.ylabel("Time (seconds)")
+plt.legend()
+plt.grid()
+plt.show()
 
 # Plot reflection and transmission vs wavelength
 for idx, pol in enumerate(['xx', 'yx', 'xy', 'yy', 'pp', 'sp', 'ps', 'ss']):
@@ -143,8 +141,9 @@ for idx, pol in enumerate(['xx', 'yx', 'xy', 'yy', 'pp', 'sp', 'ps', 'ss']):
     plt.plot(orders, R_spec[:, idx], label='Reflection (R)')
     plt.plot(orders, T_spec[:, idx], label='Transmission (T)')
     plt.title(f"Reflectance and Transmittance (θ={inc_angle_deg}°) at {pol} polarization")
-    plt.xlabel("Wavelength (nm)")
+    plt.xlabel("Order")
     plt.ylabel("Efficiency")
     plt.legend()
     plt.grid()
+    # plt.savefig(f"{pol}pol_vs_orders.png", dpi=300)
     plt.show()

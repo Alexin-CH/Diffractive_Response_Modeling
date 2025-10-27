@@ -58,7 +58,7 @@ inc_angle_deg = 30.0
 inc_angle = inc_angle_deg * np.pi/180.0
 azi_angle = 0.0
 
-def simulate_spectrum(wl_list, angle_deg):
+def simulate_spectrum(wl_list, angle_deg, order=[0,3]):
     """Compute reflection and transmission spectra over wavelengths at a given angle."""
     R_list = []
     T_list = []
@@ -66,7 +66,7 @@ def simulate_spectrum(wl_list, angle_deg):
     for wl in tqdm_wl:
         tqdm_wl.set_description(f"Simulating λ={wl:.1f} nm")
         freq = 1.0 / wl
-        sim = torcwa.rcwa(freq=freq, order=[0, 3], L=L, 
+        sim = torcwa.rcwa(freq=freq, order=order, L=L, 
                           dtype=sim_dtype, device=device)
         perm_map = torch.zeros((nz, ny), dtype=sim_dtype, device=device)
         sim.add_input_layer(eps=eps_air)            # superstrate (air)
