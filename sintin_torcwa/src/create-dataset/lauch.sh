@@ -2,8 +2,10 @@
 
 set -e
 
+. ../../../venv/bin/activate
+
 # Define ranges
-angle_start=0
+angle_start=10
 angle_end=70
 
 wavelength_start=200
@@ -19,7 +21,7 @@ period_end=10000
 # # # # # # # # # # # # # #
 items=50
 sim_items=10
-nh=3
+nh=20
 discretization=256
  # # # # # # # # # # # # #
 # # # # # # # # # # # # #
@@ -38,12 +40,13 @@ for amplitude in $(seq $amplitude_start $amplitude_step $amplitude_end); do
         for angle in $(seq $angle_start $angle_step $angle_end); do
             for wavelength in $(seq $wavelength_start $wavelength_step $wavelength_end); do
                 # filename = f"data_sim.{int(args.wl)}_{int(args.ang)}.{args.nh}_{args.discretization}.{int(amplitude)}_{int(period)}_{int(zmax)}.pt"
-                filename="data-outputs/data_sim.${wavelength}_${angle}.${nh}_${discretization}.${amplitude}_${period}.pt"
+                filename="data-outputs/data_sim.${wavelength}.${angle}.${nh}.${discretization}.${amplitude}.${period}.pt"
                 if [ -f "$filename" ]; then
                     echo "File $filename already exists, skipping..."
                     continue
                 fi
-                PYTHON_JIT=0 python3 dataset/process.py --wl $wavelength --ang $angle --nh $nh --discretization $discretization --sin_amplitude $amplitude --sin_period $period --filename "$filename"
+                #amplitude=55
+                python3 process.py --wl $wavelength --ang $angle --nh $nh --discretization $discretization --sin_amplitude $amplitude --sin_period $period --filename "$filename"
             done
         done
     done

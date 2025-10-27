@@ -14,8 +14,6 @@ import numpy as np
 from tqdm import tqdm
 import torcwa
 
-
-
 def main():
     # 1) Parse command‐line arguments
     parser = argparse.ArgumentParser(
@@ -90,7 +88,7 @@ def main():
     # 7) Build and run RCWA simulation
     freq = 1.0 / args.wl  # in 1/nm
     sim = torcwa.rcwa(freq=freq,
-                      order=[args.nh, args.nh],
+                      order=[0, args.nh],
                       L=L,
                       dtype=sim_dtype,
                       device=device)
@@ -141,42 +139,6 @@ def main():
 
     # 7.6) Solve S‐matrix and compute reflectance/transmittance
     sim.solve_global_smatrix()
-    # R_pol, T_pol = {}, {}
-    # for pol in ['pp','ss','ps','sp','xx','xy','yx','yy']:
-    #     R0 = sim.S_parameters(orders=[0,0],
-    #                           direction='forward',
-    #                           port='reflection',
-    #                           polarization=pol,
-    #                           ref_order=[0,0])
-    #     T0 = sim.S_parameters(orders=[0,0],
-    #                           direction='forward',
-    #                           port='transmission',
-    #                           polarization=pol,
-    #                           ref_order=[0,0])
-    #     R_pol[pol] = (R0.abs().cpu()**2).item()
-    #     T_pol[pol] = (T0.abs().cpu()**2).item()
-
-    # # 7.7) Extract E and H fields in the Y–Z plane
-    # [Ex, Ey, Ez], [Hx, Hy, Hz] = sim.field_yz(torcwa.rcwa_geo.y, z, L[1]/2)
-
-    # fields = {
-    #     'Ex': Ex.cpu(),
-    #     'Ey': Ey.cpu(),
-    #     'Ez': Ez.cpu(),
-    #     'Hx': Hx.cpu(),
-    #     'Hy': Hy.cpu(),
-    #     'Hz': Hz.cpu(),
-    # }
-
-    # # 8) Package all data, including the permittivity map
-    # sample = {
-    #     'theta':         args.ang,          # incidence angle
-    #     'wavelength':    args.wl,
-    #     'reflectance':   R_pol,
-    #     'transmittance': T_pol,
-    #     'fields':        fields,
-    #     'perm_map':      perm_map.cpu(),    # permittivity map (z vs y)
-    # }
 
     sample = sim.export_data_dict()
 
