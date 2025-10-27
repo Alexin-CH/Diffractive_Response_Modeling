@@ -19,8 +19,7 @@ period_end=10000
 
  # # # # # # # # # # # # # #
 # # # # # # # # # # # # # #
-items=50
-sim_items=10
+items=11
 nh=20
 discretization=256
  # # # # # # # # # # # # #
