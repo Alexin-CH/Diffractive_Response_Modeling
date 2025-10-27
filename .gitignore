@@ -6,6 +6,8 @@ model_pt/
 difference_img/
 fields_img/
 
+data-outputs/
+
 *.pkl
 *.pt
 
