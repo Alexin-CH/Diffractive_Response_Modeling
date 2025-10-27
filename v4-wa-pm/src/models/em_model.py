@@ -43,21 +43,23 @@ class ReconstructionCNN(nn.Module):
         self.conv_1 = nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, padding=1)
         self.conv_2 = nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, padding=1)
         self.conv_3 = nn.Conv2d(in_channels=32, out_channels=12, kernel_size=3, padding=1)
-        self.pool = nn.Upsample(scale_factor=2, mode='nearest')
+        self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
 
     def forward(self, permittivity_features, mlp_output):
         mlp_out = mlp_output.unsqueeze(-1).unsqueeze(-1)
         mlp_out = mlp_out.repeat(1, 1, permittivity_features.shape[2], permittivity_features.shape[3])
 
-        combined = permittivity_features + mlp_out
+        combined_factors = 0.6
+        combined = combined_factors * permittivity_features + (1 - combined_factors) * mlp_out
 
         #print(f"Combined shape: {combined.shape}")
         out_1 = nn.RReLU()(self.conv_1(combined))
         #print(f"out_1 shape: {out_1.shape}")
-        in_2 = self.pool(out_1)
+        in_2 = self.upsample(out_1)
         out_2 = nn.RReLU()(self.conv_2(in_2))
         #print(f"out_2 shape: {out_2.shape}")
-        in_3 = self.pool(out_2)
+        in_3 = self.upsample(out_2)
         out_3 = self.conv_3(in_3)
         #print(f"out_3 shape: {out_3.shape}")
         return out_3
