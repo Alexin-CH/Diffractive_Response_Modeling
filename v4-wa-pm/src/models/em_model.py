@@ -4,33 +4,40 @@ import torch.nn as nn
 class PermittivityCNN(nn.Module):
     def __init__(self):
         super(PermittivityCNN, self).__init__()
-        self.conv_1 = nn.Conv2d(in_channels=2, out_channels=32, kernel_size=3, padding=1)
-        self.conv_2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
-        self.conv_3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
+        self.conv_1 = nn.Conv2d(in_channels=2, out_channels=16, kernel_size=3, padding=1)
+        self.conv_2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1)
+        self.conv_3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
+        self.conv_4 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
+
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        self.activation = nn.RReLU()
         
     def forward(self, x):
         in_1 = x
-        #print(f"in_1 shape: {in_1.shape}")
-        out_1 = nn.RReLU()(self.conv_1(in_1))
-        #print(f"out_1 shape: {out_1.shape}")
-        in_2 = self.pool(out_1 + in_1.repeat(1, 16, 1, 1))
-        out_2 = nn.RReLU()(self.conv_2(in_2))
-        #print(f"out_2 shape: {out_2.shape}")
+        out_1 = self.activation(self.conv_1(in_1))
+
+        in_2 = self.pool(out_1 + in_1.repeat(1, 8, 1, 1))
+        out_2 = self.activation(self.conv_2(in_2))
+
         in_3 = self.pool(out_2 + in_2.repeat(1, 2, 1, 1))
-        out_3 = nn.RReLU()(self.conv_3(in_3))
-        #print(f"out_3 shape: {out_3.shape}")
-        return out_3
+        out_3 = self.activation(self.conv_3(in_3))
+
+        in_4 = self.pool(out_3 + in_3.repeat(1, 2, 1, 1))
+        out_4 = self.activation(self.conv_4(in_4))
+
+        return out_4
 
 
 class AngleWavelengthMLP(nn.Module):
     def __init__(self):
         super(AngleWavelengthMLP, self).__init__()
+        self.activation = nn.Tanh()
         self.net = nn.Sequential(
             nn.Linear(4, 32),
-            nn.RReLU(),
+            self.activation,
             nn.Linear(32, 64),
-            nn.RReLU(),
+            self.activation,
             nn.Linear(64, 128)
         )
         
@@ -42,27 +49,37 @@ class ReconstructionCNN(nn.Module):
         super(ReconstructionCNN, self).__init__()
         self.conv_1 = nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, padding=1)
         self.conv_2 = nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, padding=1)
-        self.conv_3 = nn.Conv2d(in_channels=32, out_channels=12, kernel_size=3, padding=1)
+        self.conv_3 = nn.Conv2d(in_channels=32, out_channels=16, kernel_size=3, padding=1)
+        self.conv_4 = nn.Conv2d(in_channels=16, out_channels=12, kernel_size=3, padding=1)
+
         self.upsample = nn.Upsample(scale_factor=2, mode='nearest')
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        self.activation = nn.RReLU()
 
     def forward(self, permittivity_features, mlp_output):
         mlp_out = mlp_output.unsqueeze(-1).unsqueeze(-1)
         mlp_out = mlp_out.repeat(1, 1, permittivity_features.shape[2], permittivity_features.shape[3])
 
+        # print("Shapes")
+        # print(permittivity_features.shape)
+        # print(mlp_out.shape)
+
         combined_factors = 0.6
         combined = combined_factors * permittivity_features + (1 - combined_factors) * mlp_out
 
-        #print(f"Combined shape: {combined.shape}")
-        out_1 = nn.RReLU()(self.conv_1(combined))
-        #print(f"out_1 shape: {out_1.shape}")
+        out_1 = self.activation(self.conv_1(combined))
+
         in_2 = self.upsample(out_1)
-        out_2 = nn.RReLU()(self.conv_2(in_2))
-        #print(f"out_2 shape: {out_2.shape}")
+        out_2 = self.activation(self.conv_2(in_2))
+
         in_3 = self.upsample(out_2)
-        out_3 = self.conv_3(in_3)
-        #print(f"out_3 shape: {out_3.shape}")
-        return out_3
+        out_3 = self.activation(self.conv_3(in_3))
+
+        in_4 = self.upsample(out_3)
+        out_4 = self.conv_4(in_4)
+
+        return out_4
 
 class EMFieldModel(nn.Module):
     def __init__(self):

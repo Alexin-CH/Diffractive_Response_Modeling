@@ -66,7 +66,7 @@ def main(deterministic=False):
         dataset=dataset,
         num_epochs=1e3,
         batch_size=32,
-        learning_rate=1e-3,
+        learning_rate=1e-2,
         device=device,
         lm=lm
     )
@@ -78,7 +78,7 @@ def main(deterministic=False):
         model.save_model(f"{current_dir}/model_pt/{title}.pt")
         lm.logger.info(f"Model saved successfully as {title}.pt")
     except Exception as e:
-        lm.logger.warning(f"Couldn't save model: {e}")
+        lm.logger.error(f"Couldn't save model: {e}")
 
     display_loss(
         list_epoch_loss=list_epoch_loss,

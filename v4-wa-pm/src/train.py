@@ -23,7 +23,7 @@ class RobustMSELoss(nn.Module):
 loss_L1 = nn.SmoothL1Loss()
 loss_L2 = nn.MSELoss()
 loss_hub = nn.HuberLoss(delta=0.1)
-loss_robust = RobustMSELoss(sigma=0.1)
+loss_robust = RobustMSELoss(sigma=0.01)
 
 loss_fn = loss_L2
 
@@ -77,8 +77,8 @@ def train_model(model, dataset, num_epochs, batch_size, learning_rate, device, l
 
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-4)
     # optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.8)
-    # scheduler = optim.lr_scheduler.PolynomialLR(optimizer, total_iters=num_epochs*1, power=2)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.98, patience=2, min_lr=1e-6)
+    scheduler = optim.lr_scheduler.PolynomialLR(optimizer, total_iters=num_epochs*1, power=2)
+    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.98, patience=2, min_lr=1e-6)
 
     list_epoch_loss = []
     list_val_loss = []
@@ -106,7 +106,7 @@ def train_model(model, dataset, num_epochs, batch_size, learning_rate, device, l
             
             preds = model(context, X)
 
-            loss = loss_fn(preds, Y) * 1e0
+            loss = loss_fn(preds, Y) ** 2
             losses.append(loss)
             loss.backward()
 
@@ -121,7 +121,7 @@ def train_model(model, dataset, num_epochs, batch_size, learning_rate, device, l
 
         epoch_loss = sum(losses) / len(losses)
 
-        scheduler.step(epoch_loss)
+        scheduler.step()
 
         list_epoch_loss.append(epoch_loss.item())
         lm.logger.debug(f"Epoch {epoch + 1}/{num_epochs} completed. Loss: {epoch_loss:.6f}")

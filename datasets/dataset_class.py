@@ -83,6 +83,8 @@ class OpticalSimulationDatasetPD(Dataset):
 
         # Avoid index 0 if possible (for any special handling)
         # There's an issue with index 0 in some datasets, idk why.
+        # Probably because the permittivity map is store in the first sample,
+        # so this particular sample as one additionnal feature and can't be add in multibatch
         if idx == 0:
             idx = np.random.randint(1, len(self.df) - 1)
 
