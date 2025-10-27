@@ -81,7 +81,13 @@ class OpticalSimulationDatasetPD(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
+        # Avoid index 0 if possible (for any special handling)
+        # There's an issue with index 0 in some datasets, idk why.
+        if idx == 0:
+            idx = np.random.randint(1, len(self.df) - 1)
+
         sample = self.df.iloc[idx].copy().to_dict()
+
         # convert any torch tensors back to tensors (they are stored as torch tensors already)
         if self.transform:
             sample = self.transform(sample)

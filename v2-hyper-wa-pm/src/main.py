@@ -9,7 +9,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from train import train_model, extract_from_batch
-from models.linear import LinearModel, MLPnet
+from models.linear import LinearModel
 from models.conv import ConvNet
 from models.unet import UNet
 from hyper_network import HyperNetwork
@@ -78,7 +78,7 @@ def main(deterministic=False):
     list_epoch_loss, list_val_loss, model = train_model(
         model=model,
         dataset=dataset,
-        num_epochs=1e3,
+        num_epochs=1e2,
         batch_size=1,
         learning_rate=1e-3,
         device=device,

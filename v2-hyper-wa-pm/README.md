@@ -14,3 +14,4 @@ Fields are initially sampled on a 2D grid of size 256x500 (x,z).
 ## Model
 The model is a HyperNet that takes as input the wavelength, angle and returns the weights of a CNN that takes as input the permittivity map and returns the fields in and around the structure.
 
+![loss](assets/ex_loss.png)

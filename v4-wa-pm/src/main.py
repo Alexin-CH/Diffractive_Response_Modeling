@@ -9,10 +9,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from train import train_model, extract_from_batch
-
-from models.linear import LinearModel
-from models.conv import FFT_Field_Predictor as ConvNet
-from hyper_network import HyperNetwork
+from models.em_model import EMFieldModel
 
 from datasets.dataset_class import OpticalSimulationDatasetPD
 from utils import LoggerManager
@@ -36,7 +33,7 @@ def fixed_seed_deterministic_run(seed=42):
 def main(deterministic=False):
     # Setup
     date = datetime.now().strftime("%y%m%d_%H%M%S")
-    title = f"{date}_cnn_model"
+    title = f"{date}_model"
     lm = LoggerManager(log_dir=f"{current_dir}/logs", log_name=title)
     lm.logger.info("Logger initialized")
 
@@ -47,30 +44,18 @@ def main(deterministic=False):
     lm.logger.info(f"Using device: {device}")
 
     if deterministic:
-        fixed_seed_deterministic_run(42)
+        fixed_seed_deterministic_run()
         lm.logger.info("Fixed seed set for deterministic run")
 
     lm.logger.info("Initializing model...")
 
-    # Initialize models with corrected channel sizes
-    parent_model = LinearModel(in_ch=4).to(device)
-    child_model = ConvNet(in_ch=2, hidden=32, out_ch=12).to(device)
-
-    if False:  # Set to True to load pre-trained models
-        lm.logger.info("Loading pre-trained models...")
-        pretrain_date = "250911_234255"
-        child_model = child_model.load_model(f"{current_dir}/model_pt/{pretrain_date}_cnn_model.pt.child.pt", mode='train')
-        parent_model = parent_model.load_model(f"{current_dir}/model_pt/{pretrain_date}_cnn_model.pt.parent.pt", mode='train')
-        lm.logger.info("Models initialized successfully")
-
-    model = HyperNetwork(parent_model, child_model, mode='first_and_last')
+    model = EMFieldModel()
 
     model = model.to(device)
 
     lm.logger.info("Loading dataset...")
     dataset = OpticalSimulationDatasetPD(
         data_file="datasets/dataset_SinTiN_TORCWA_25_400_2000_25_0_70_4_64.pkl",
-        fft=True,
         normalize=True,
         device=device,
         logger=lm.logger
@@ -79,9 +64,9 @@ def main(deterministic=False):
     list_epoch_loss, list_val_loss, model = train_model(
         model=model,
         dataset=dataset,
-        num_epochs=1e2,
-        batch_size=1,
-        learning_rate=1e-4,
+        num_epochs=1e3,
+        batch_size=69,
+        learning_rate=1e-3,
         device=device,
         lm=lm
     )
@@ -111,41 +96,46 @@ def main(deterministic=False):
         perm_map_real = perm_map.real
         perm_map_imag = perm_map.imag
 
-        X_fft = torch.stack([perm_map_real, perm_map_imag], dim=0).unsqueeze(0).float().to(device)
-        context, Y_fft = extract_from_batch(sample, device=device)
+        X = torch.stack([perm_map_real, perm_map_imag], dim=0).unsqueeze(0).float().to(device)
+        context, Y = extract_from_batch(sample, device=device)
 
         model = model.to(device)
         model.eval()
-        preds_fft = model(context, X_fft)
+        preds = model(context, X)
 
         # Invert to get fields from Y
-        fields_fft = preds_fft.squeeze(0)
-        Ex_fft = torch.complex(fields_fft[0], fields_fft[1])
-        Ey_fft = torch.complex(fields_fft[2], fields_fft[3])
-        Ez_fft = torch.complex(fields_fft[4], fields_fft[5])
-        Hx_fft = torch.complex(fields_fft[6], fields_fft[7])
-        Hy_fft = torch.complex(fields_fft[8], fields_fft[9])
-        Hz_fft = torch.complex(fields_fft[10], fields_fft[11])
+        fields = preds.squeeze(0)
+        Ex = torch.complex(fields[0], fields[1])
+        Ey = torch.complex(fields[2], fields[3])
+        Ez = torch.complex(fields[4], fields[5])
+        Hx = torch.complex(fields[6], fields[7])
+        Hy = torch.complex(fields[8], fields[9])
+        Hz = torch.complex(fields[10], fields[11])
 
         display_fields(
-            Ex=Ex_fft, Ey=Ey_fft, Ez=Ez_fft,
-            Hx=Hx_fft, Hy=Hy_fft, Hz=Hz_fft,
-            title=f"{title}_fft",
+            Ex=Ex, Ey=Ey, Ez=Ez, Hx=Hx, Hy=Hy, Hz=Hz,
+            title=title,
             dir=current_dir,
             lm=lm
         )
 
-        true_fields_fft = Y_fft.squeeze(0)
-        Ex_ref_fft = torch.complex(true_fields_fft[0], true_fields_fft[1])
-        Ey_ref_fft = torch.complex(true_fields_fft[2], true_fields_fft[3])
-        Ez_ref_fft = torch.complex(true_fields_fft[4], true_fields_fft[5])
-        Hx_ref_fft = torch.complex(true_fields_fft[6], true_fields_fft[7])
-        Hy_ref_fft = torch.complex(true_fields_fft[8], true_fields_fft[9])
-        Hz_ref_fft = torch.complex(true_fields_fft[10], true_fields_fft[11])
+        fields_ref = Y.squeeze(0)
+        Ex_ref = torch.complex(fields_ref[0], fields_ref[1])
+        Ey_ref = torch.complex(fields_ref[2], fields_ref[3])
+        Ez_ref = torch.complex(fields_ref[4], fields_ref[5])
+        Hx_ref = torch.complex(fields_ref[6], fields_ref[7])
+        Hy_ref = torch.complex(fields_ref[8], fields_ref[9])
+        Hz_ref = torch.complex(fields_ref[10], fields_ref[11])
+
+        E = torch.sqrt(torch.abs(Ex)**2 + torch.abs(Ey)**2 + torch.abs(Ez)**2)
+        E_ref = torch.sqrt(torch.abs(Ex_ref)**2 + torch.abs(Ey_ref)**2 + torch.abs(Ez_ref)**2)
+
+        H = torch.sqrt(torch.abs(Hx)**2 + torch.abs(Hy)**2 + torch.abs(Hz)**2)
+        H_ref = torch.sqrt(torch.abs(Hx_ref)**2 + torch.abs(Hy_ref)**2 + torch.abs(Hz_ref)**2)
 
         display_difference(
-            E=Ex_fft, E_ref=Ex_ref_fft,
-            H=Hx_fft, H_ref=Hx_ref_fft,
+            E=E, E_ref=E_ref,
+            H=H, H_ref=H_ref,
             title=title,
             dir=current_dir,
             lm=lm
