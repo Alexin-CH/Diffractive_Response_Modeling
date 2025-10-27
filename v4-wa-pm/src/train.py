@@ -10,12 +10,22 @@ from tqdm import tqdm
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, message="Casting complex values to real discards the imaginary part")
 
+class RobustMSELoss(nn.Module):
+    def __init__(self, sigma=1.0):
+        super(RobustMSELoss, self).__init__()
+        self.sigma = sigma
+
+    def forward(self, input, target):
+        diff = input - target
+        loss = torch.log1p(diff ** 2 / self.sigma).mean()
+        return loss
 
 loss_L1 = nn.SmoothL1Loss()
 loss_L2 = nn.MSELoss()
 loss_hub = nn.HuberLoss(delta=0.1)
+loss_robust = RobustMSELoss(sigma=0.1)
 
-loss_fn = loss_L1
+loss_fn = loss_L2
 
 def extract_from_batch(batch, device):
     """
@@ -65,7 +75,7 @@ def train_model(model, dataset, num_epochs, batch_size, learning_rate, device, l
     perm_map_imag = perm_map_norm.imag
     perm_map = torch.stack([perm_map_real, perm_map_imag], dim=0).unsqueeze(0).float().to(device)
 
-    optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.2)
+    optimizer = optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-4)
     # optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.8)
     # scheduler = optim.lr_scheduler.PolynomialLR(optimizer, total_iters=num_epochs*1, power=2)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.98, patience=2, min_lr=1e-6)
