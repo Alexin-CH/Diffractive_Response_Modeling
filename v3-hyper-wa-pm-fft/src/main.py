@@ -14,7 +14,7 @@ from models.linear import LinearModel
 from models.conv import FFT_Field_Predictor as ConvNet
 from hyper_network import HyperNetwork
 
-from datasets.dataset_class import OpticalSimulationDatasetPD
+from dataset import OpticalSimulationDatasetPD
 from utils import LoggerManager
 from visualization import display_loss, display_fields, display_difference
 

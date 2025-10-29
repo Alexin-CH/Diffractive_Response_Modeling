@@ -13,7 +13,7 @@ from models.conv import ConvFieldPredictor
 from models.linear import LinearModel
 from hyper_network import HyperNetwork
 
-from datasets.dataset_utils_pt import OpticalSimulationDataset
+from dataset import OpticalSimulationDataset
 from utils import LoggerManager
 
 current_dir = os.path.dirname(os.path.abspath(__file__))

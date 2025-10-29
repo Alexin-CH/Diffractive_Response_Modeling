@@ -14,7 +14,7 @@ from models.conv import ConvNet
 from models.unet import UNet
 from hyper_network import HyperNetwork
 
-from datasets.dataset_class import OpticalSimulationDatasetPD
+from dataset import OpticalSimulationDatasetPD
 from utils import LoggerManager
 from visualization import display_loss, display_fields, display_difference
 

@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 
 from train import train_model
 from models.conv import FieldPredictorV0
-from datasets.dataset_utils_pt import OpticalSimulationDataset
+from dataset import OpticalSimulationDataset
 from utils import LoggerManager
 
 current_dir = os.path.dirname(os.path.abspath(__file__))

@@ -28,8 +28,8 @@ def extract_from_batch(batch, device):
 
     # Shape: (batch_size, 12, w, h)
     h = fields.shape[3]
-    X = fields[:, :, :, (h//2)+1:].float() # Fields above the structure
-    Y = fields[:, :, :, 0:h//2].float()
+    X = fields[:, :, :, :h//2]
+    Y = fields[:, :, :, h//2:]
 
     # Visualization
     # import matplotlib.pyplot as plt

@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from train import train_model, extract_from_batch
 from models.em_model import EMFieldModel
 
-from datasets.dataset_class import OpticalSimulationDatasetPD
+from dataset import OpticalSimulationDatasetPD
 from utils import LoggerManager
 from visualization import display_loss, display_fields, display_difference
 
