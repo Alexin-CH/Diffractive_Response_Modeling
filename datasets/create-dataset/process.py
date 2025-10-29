@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-process.py — Generate one RCWA sample for given (wavelength, angle, nh, discretization)
-"""
 import os
 import argparse
 import time
@@ -11,11 +6,9 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
-import torcwa
-from torcwa_utils import export_data_dict
+from rcwa import setup, export_data_dict
 
-def main():
-    # 1) Parse command‐line arguments
+def parse():
     parser = argparse.ArgumentParser(
         description="Generate and save one RCWA sample for a single wavelength and angle"
     )
@@ -35,115 +28,18 @@ def main():
                         help="Output filename (default: data_sim.pt)")
     
     args = parser.parse_args()
+    return args
 
+def main(args):
     t0 = time.time()
 
-    # 2) Device and dtypes
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    torch.set_default_device(device)
-    sim_dtype = torch.complex64
-    geo_dtype = torch.float32
+    filepath = args.filename
+    amplitude = args.sin_amplitude
+    period = args.sin_period
 
-    # 3) Unit cell size (nm)
-    Lx, Ly = 1000.0, 1000.0
-    L = [Lx, Ly]
-
-    torcwa.rcwa_geo.dtype = geo_dtype
-    torcwa.rcwa_geo.device = device
-    torcwa.rcwa_geo.Lx = Lx
-    torcwa.rcwa_geo.Ly = Ly
-    torcwa.rcwa_geo.nx = args.discretization
-    torcwa.rcwa_geo.ny = args.discretization
-    torcwa.rcwa_geo.grid()
-
-    # 4) Materials
-    eps_air   = torch.tensor(1.0, dtype=sim_dtype, device=device)
-    n_sub     = 1.44
-    eps_sub   = torch.tensor(n_sub**2, dtype=sim_dtype, device=device)
-    eps_metal = torch.tensor(3.61 + 6.03j, dtype=sim_dtype, device=device)
-
-    # 5) Sinusoidal corrugation parameters
-    amplitude  = args.sin_amplitude  # nm
-    period     = args.sin_period    # nm
-    num_layers = 30
-    dz         = (2 * amplitude) / num_layers
-
-    # 6) z‐axis and central x‐slice index
-    zmax = 1000.0  # nm
-    z = torch.linspace(-zmax, zmax, 500, device=device)
-    nz = z.numel()
-    x_slice = Lx / 2
-    x_idx = torch.argmin(torch.abs(torcwa.rcwa_geo.x - x_slice)).item()
-
-    # Precompute height profile h(x,y)
-    X, Y = torch.meshgrid(torcwa.rcwa_geo.x,
-                          torcwa.rcwa_geo.y,
-                          indexing="xy")
-    h = amplitude * torch.sin(2 * np.pi * X / period) + amplitude
-
-    def create_pattern_layer(z_mid, base):
-        # Returns a mask = 1 where metal, 0 where air
-        return (h >= (z_mid - base)).to(sim_dtype)
-
-    # 7) Build and run RCWA simulation
-    freq = 1.0 / args.wl  # in 1/nm
-    sim = torcwa.rcwa(freq=freq,
-                      order=[0, args.nh],
-                      L=L,
-                      dtype=sim_dtype,
-                      device=device)
-
-    # Prepare permittivity map (z vs y) for diagnostics
-    perm_map = torch.zeros((nz, torcwa.rcwa_geo.ny),
-                           dtype=sim_dtype,
-                           device=device)
-
-    # 7.1) Superstrate (air)
-    total_struct = 2 * amplitude + 50.0
-    mask_sup = (z >= total_struct)
-    perm_map[mask_sup, :] = eps_air
-    sim.add_input_layer(eps=eps_air)
-    sim.add_output_layer(eps=eps_sub)
-
-    # 7.2) Incident wave and angle
-    sim.set_incident_angle(inc_ang=args.ang * np.pi/180, azi_ang=0.0)
-    sim.source_planewave(amplitude=[1.0, 0.0], direction="f")
-
-    # 7.3) Uniform metal base layer (50 nm)
-    cumul = 0.0
-    z_bot, z_top = cumul, cumul + 50.0
-    sim.add_layer(thickness=50.0, eps=eps_metal)
-    idx = (z >= z_bot) & (z < z_top)
-    perm_map[idx, :] = eps_metal
-    cumul = z_top
-
-    # 7.4) Sinusoidal layers
-    base = cumul
-    for _ in range(num_layers):
-        z_bot = cumul
-        z_top = cumul + dz
-        z_mid = 0.5 * (z_bot + z_top)
-
-        mask2d = create_pattern_layer(z_mid, base)
-        layer_eps = mask2d * eps_metal + (1 - mask2d) * eps_air
-
-        sim.add_layer(thickness=dz, eps=layer_eps)
-
-        idx = (z >= z_bot) & (z < z_top)
-        perm_map[idx, :] = layer_eps[x_idx, :]
-        cumul = z_top
-
-    # 7.5) Substrate (SiO₂)
-    mask_sub = (z < 0.0)
-    perm_map[mask_sub, :] = eps_sub
-
-    # 7.6) Solve S‐matrix and compute reflectance/transmittance
-    sim.solve_global_smatrix()
-
+    sim, perm_map = setup_and_run_torcwa(args, device='cpu')
     sample = export_data_dict(sim)
 
-    # 9) Save to disk
-    filepath = args.filename
     path = filepath.split('/')[:-1]
 
     out_dir = os.path.join(*path) if path else '.'
@@ -152,7 +48,7 @@ def main():
     filename = filepath.split('/')[-1]
 
     # Save permittivity map if not already saved
-    perm_map_title = f"data_sim.perm_map.amp{int(amplitude)}_per{int(period)}_zmax{int(zmax)}.pt"
+    perm_map_title = f"data_sim.perm_map.amp{int(amplitude)}_per{int(period)}.pt"
     if not os.path.exists(os.path.join(out_dir, perm_map_title)):
         torch.save(perm_map.cpu(), os.path.join(out_dir, perm_map_title))
         print(f"Permittivity map saved to: {os.path.join(out_dir, perm_map_title)} ({time.time()-t0:.2f}s)")
@@ -162,4 +58,5 @@ def main():
     print(f"Sample saved to: {os.path.join(out_dir, filename)} ({time.time()-t0:.2f}s)")
 
 if __name__ == "__main__":
-    main()
+    args = parse()
+    main(args)
