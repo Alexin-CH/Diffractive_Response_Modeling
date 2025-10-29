@@ -6,7 +6,11 @@ pi = 3.141592652589793
 
 class rcwa:
     # Simulation setting
-    def __init__(self,freq,order,L,*,
+    def __init__(self,
+            freq,
+            order,
+            L,
+            *,
             dtype=torch.complex64,
             device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'),
             stable_eig_grad=True,
@@ -1305,60 +1309,3 @@ class rcwa:
 
         return [S11, S21, S12, S22], C
 
-    def export_data_dict(self):
-        '''
-            Export data to a dictionary.
-            Returns a dictionary containing the RCWA data.
-        '''
-        data_dict = {
-            'freq': self.freq,
-            'inc_ang': self.inc_ang,
-            'azi_ang': self.azi_ang,
-            'L': self.L,
-            'Kx_norm_dn': self.Kx_norm_dn,
-            'Ky_norm_dn': self.Ky_norm_dn,
-            'Kx_norm': self.Kx_norm,
-            'Ky_norm': self.Ky_norm,
-            'S': self.S,
-            'C': self.C,
-            'Vi': self.Vi,
-            'Vo': self.Vo,
-            'Vf': self.Vf,
-            'E_i': self.E_i,
-            'eps_in': self.eps_in,
-            'mu_in': self.mu_in,
-            'eps_out': self.eps_out,
-            'mu_out': self.mu_out,
-            'kx_norm': self.kx_norm,
-            'ky_norm': self.ky_norm,
-            'kz_norm': self.kz_norm,
-            'order': self.order,
-        }
-        return data_dict
-        
-            #'thickness': self.thickness,
-            #'layer_N': self.layer_N,
-            #'P': self.P,
-            #'Q': self.Q,
-            #'E_eigvec': self.E_eigvec,
-            #'H_eigvec': self.H_eigvec,
-            #'Cf': self.Cf,
-            #'Cb': self.Cb,
-            #'layer_S11': self.layer_S11,
-            #'layer_S21': self.layer_S21,
-            #'layer_S12': self.layer_S12,
-            #'layer_S22': self.layer_S22,
-            #'Sin': self.Sin,
-            #'Sout': self.Sout,
-            #'order_N': self.order_N,
-            #'kx0_norm': self.kx0_norm,
-            #'ky0_norm': self.ky0_norm,
-            #'angle_layer': self.angle_layer,
-            #'device': self._device,
-            #'dtype': self._dtype,
-            #'eps_conv': self.eps_conv,
-            #'mu_conv': self.mu_conv,
-            #'order_x': self.order_x,
-            #'order_y': self.order_y,
-            #'Gx_norm': self.Gx_norm,
-            #'Gy_norm': self.Gy_norm,

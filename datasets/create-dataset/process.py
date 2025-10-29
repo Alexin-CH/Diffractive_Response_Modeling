@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 process.py — Generate one RCWA sample for given (wavelength, angle, nh, discretization)
-Usage:
-    python3 process.py --wl 500 --ang 30 --nh 100 --discretization 64
 """
 import os
 import argparse
@@ -12,7 +10,9 @@ import time
 import torch
 import numpy as np
 from tqdm import tqdm
+
 import torcwa
+from torcwa_utils import export_data_dict
 
 def main():
     # 1) Parse command‐line arguments
@@ -140,21 +140,26 @@ def main():
     # 7.6) Solve S‐matrix and compute reflectance/transmittance
     sim.solve_global_smatrix()
 
-    sample = sim.export_data_dict()
+    sample = export_data_dict(sim)
 
     # 9) Save to disk
-    out_dir = "data-outputs"
-    os.makedirs(out_dir, exist_ok=True)
-    filename = args.filename
-    out_path = os.path.join(filename)
-    torch.save(sample, out_path)
-    print(f"Sample saved to: {out_path} ({time.time()-t0:.2f}s)")
+    filepath = args.filename
+    path = filepath.split('/')[:-1]
 
-    perm_map_title = f"data_sim.perm_map.{int(amplitude)}_{int(period)}_{int(zmax)}.pt"
-    perm_map_path = os.path.join(out_dir, perm_map_title)
-    if not os.path.exists(perm_map_path):
-        torch.save(perm_map.cpu(), perm_map_path)
-        print(f"Permittivity map saved to: {perm_map_path}")
+    out_dir = os.path.join(*path) if path else '.'
+    os.makedirs(out_dir, exist_ok=True)
+
+    filename = filepath.split('/')[-1]
+
+    # Save permittivity map if not already saved
+    perm_map_title = f"data_sim.perm_map.amp{int(amplitude)}_per{int(period)}_zmax{int(zmax)}.pt"
+    if not os.path.exists(os.path.join(out_dir, perm_map_title)):
+        torch.save(perm_map.cpu(), os.path.join(out_dir, perm_map_title))
+        print(f"Permittivity map saved to: {os.path.join(out_dir, perm_map_title)} ({time.time()-t0:.2f}s)")
+    
+    # Save simulation data
+    torch.save(sample, os.path.join(out_dir, filename))
+    print(f"Sample saved to: {os.path.join(out_dir, filename)} ({time.time()-t0:.2f}s)")
 
 if __name__ == "__main__":
     main()
