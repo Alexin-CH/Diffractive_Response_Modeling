@@ -5,27 +5,6 @@ import numpy as np
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-
-def compute_and_add_fft(df, colums, device='cpu'):
-    """
-    Compute 2D FFT (fft2 + fftshift) for each torch.Tensor in `fields` columns and
-    add new columns named '{field}_fft'. Returns (df_copy, stats) where stats contains
-    no. of records and dtype/device example.
-    """
-    df = df.copy()
-    N = len(df)
-    for c in colums:
-        fft_col = f'{c}_fft'
-        df.loc[:, fft_col] = [None] * N
-
-    for i in range(N):
-        for c in colums:
-            t = df.at[i, c]
-            if not isinstance(t, torch.Tensor):
-                t = torch.tensor(t, device=device)
-            df.at[i, f'{c}_fft'] = torch.fft.fftshift(torch.fft.fft2(t))
-    return df
-
 def normalize_df_columns(df, columns):
     """
     Normalize specified columns in the DataFrame using global mean and std.
@@ -54,7 +33,7 @@ def normalize_df_columns(df, columns):
     return df, mean, std
 
 class OpticalSimulationDatasetPD(Dataset):
-    def __init__(self, data_file=None, transform=None, fft=False, normalize=False, logger=None, device='cpu', dtype=torch.complex64):
+    def __init__(self, data_file=None, transform=None, normalize=False, logger=None, device='cpu', dtype=torch.complex64):
         """
         Args:
             data_file: path to saved dataset file (.pkl).
@@ -72,7 +51,7 @@ class OpticalSimulationDatasetPD(Dataset):
         self.dtype = dtype
 
         if data_file:
-            self.load_dataset(data_file, fft=fft, normalize=normalize)
+            self.load_dataset(data_file, normalize=normalize)
 
     def __len__(self):
         return 0 if self.df is None else len(self.df)
@@ -112,11 +91,10 @@ class OpticalSimulationDatasetPD(Dataset):
             print(f"Dataset saved to {output_file}")
         return self
 
-    def _to_tensor(self, arr):
-        # Convert array-like (numpy/ list) to torch tensor on desired device/dtype
-        return torch.tensor(arr, dtype=self.dtype, device=self.device)
+    def _to_tensor(self, array):
+        return torch.tensor(array, dtype=self.dtype)
 
-    def load_dataset(self, input_file, fft=False, normalize=True):
+    def load_dataset(self, input_file, normalize=True):
         if not input_file.endswith('.pkl'):
             raise ValueError("Input file must end with .pkl")
 
@@ -125,21 +103,10 @@ class OpticalSimulationDatasetPD(Dataset):
         # perm_map (assumed same shape across records) -> torch tensor
         self.perm_map = self._to_tensor(self.df.iloc[0]['perm_map']).to(self.device)
 
-        if fft:
-            self.perm_map_fft = torch.fft.fftshift(torch.fft.fft2(self.perm_map))
-        if normalize:
-            self.perm_map_norm = (self.perm_map - self.perm_map.mean()) / self.perm_map.std()
-            if fft:
-                self.perm_map_fft_norm = (self.perm_map_fft - self.perm_map_fft.mean()) / self.perm_map_fft.std()
-
-        # Collect all field tensors into a list for computing global mean/std
         fields = ['Ex', 'Ey', 'Ez', 'Hx', 'Hy', 'Hz']
 
-        if fft:
-            self.df = compute_and_add_fft(self.df, fields, device=self.device)
-            fields += [f'{f}_fft' for f in fields]
-
         if normalize:
+            self.perm_map_norm = (self.perm_map - self.perm_map.mean()) / self.perm_map.std()
             self.df, self.fields_mean, self.fields_std = normalize_df_columns(self.df, fields)
 
         if self.logger:
