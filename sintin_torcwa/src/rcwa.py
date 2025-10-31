@@ -132,6 +132,37 @@ def setup(
 
     return sim, perm_map
 
+def get_diffraction_angles(torcwa_simulation):
+    inc_angles = []
+    azi_angles = []
+    orders = np.arange(10)
+    for order in orders:
+        inc_angle, azi_angle = torcwa_simulation.diffraction_angle(
+            orders=[order, order],
+            layer='output',
+            unit='radian'
+        )
+        inc_angles.append(inc_angle)
+        azi_angles.append(azi_angle)
+    return np.unique(inc_angles), np.unique(azi_angles)
+
+def get_S_parameters(torcwa_simulation):
+    params = {}
+    for d in ['forward', 'backward']:
+        for port in ['transmission', 'reflection']:
+            for pol in ['xx', 'yx', 'xy', 'yy', 'pp', 'sp', 'ps', 'ss']:
+                s_param = torcwa_simulation.S_parameters(
+                    orders=[0, 0],
+                    direction='forward',
+                    port='transmission',
+                    polarization='xx',
+                    ref_order=[0,0],
+                    power_norm=True,
+                    evanscent=1e-3
+                )
+                params[f"{d}.{port}.{pol}"] = s_param.item()
+    return params
+
 def export_data_dict(torcwa_simulation):
         """Export relevant data from the torcwa simulation into a dictionary."""
         data_dict = {
