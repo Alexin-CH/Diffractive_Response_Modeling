@@ -7,7 +7,8 @@ working_dir=$(dirname "$0")
 
 source "$working_dir/../../venv/bin/activate"
 
-## Define ranges ###############
+###############################
+
 wavelength_start=200
 wavelength_end=2500
 
@@ -20,11 +21,12 @@ amplitude_end=100
 period_start=100
 period_end=10000
 
-items=10
+items=7
 
-## Define simulation params ####
 nh=30
 discretization=256
+perm_map=0
+
 ################################
 
 # Calculate steps based on the number of items
@@ -33,27 +35,25 @@ angle_step=$(( (angle_end - angle_start) / (items - 1) ))
 amplitude_step=$(( (amplitude_end - amplitude_start) / (items - 1) ))
 period_step=$(( (period_end - period_start) / (items - 1) ))
 
-mkdir "$working_dir/data-outputs" || echo "Directory 'data-outputs' already exists." 
+mkdir "$working_dir/samples" || echo "Directory 'samples' already exists." 
 
-# Loop through angles and wavelengths
 for wavelength in $(seq $wavelength_start $wavelength_step $wavelength_end); do
     for angle in $(seq $angle_start $angle_step $angle_end); do
         for amplitude in $(seq $amplitude_start $amplitude_step $amplitude_end); do
             for period in $(seq $period_start $period_step $period_end); do
                 filename=\
-"$working_dir/data-outputs/sample\
+"$working_dir/samples/sample\
 .wl${wavelength}\
 .ang${angle}\
 .amp${amplitude}\
 .per${period}\
 .nh${nh}\
 .dis${discretization}\
-.pt"
+.json"
                 if [ -f "$filename" ]; then
                     echo "File $filename already exists, skipping..."
                     continue
                 fi
-                #amplitude=55
                 python3 "$working_dir/process.py"  \
                     --wl $wavelength \
                     --ang $angle \
@@ -62,6 +62,7 @@ for wavelength in $(seq $wavelength_start $wavelength_step $wavelength_end); do
                     --nh $nh \
                     --discretization $discretization \
                     --filename "$filename"
+                    # --perm_map $perm_map
             done
         done
     done

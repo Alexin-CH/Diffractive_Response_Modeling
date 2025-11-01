@@ -79,15 +79,10 @@ class OpticalSimulationDatasetPD(Dataset):
             kw = all(keyword in file for keyword in keywords_list)
             akw = any(anti_keyword in file for anti_keyword in anti_keywords_list)
             if kw and not akw:
-                if file.endswith('.pkl'):
+                if file.endswith('.json'):
                     input_file = os.path.join(dirname, file)
-                    sample_df = pd.read_pickle(input_file)
+                    sample_df = pd.read_json(input_file)
                     data_list.append(sample_df)
-                    n+=1
-                elif file.endswith('.pt'):
-                    input_file = os.path.join(dirname, file)
-                    sample = torch.load(input_file, map_location=self.device)
-                    data_list.append(pd.DataFrame([sample]))
                     n+=1
         print(f"Done using {n} sample files")
         print("Concatenating data to a single DataFrame...", end=' ')
@@ -100,16 +95,24 @@ if __name__ == "__main__":
 
     dataset = OpticalSimulationDatasetPD(device=device)
     dataset.build_from_dir(
-        dirname=f"{current_dir}/data-outputs",
-        keywords_list=["data_sim", ".pt"],
+        dirname=f"{current_dir}/create-dataset/samples",
+        keywords_list=["sample", "nh30.dis256", ".json"],
         anti_keywords_list=["map"]
     )
 
     print("Dataset info:")
     print(dataset.df.info())
+    print("Dataset description:")
+    print(dataset.df.describe())
     print("First 5 entries:")
     print(dataset.df.head())
 
-    output_file = f"{current_dir}/dataset_STT_2400_20nh.pkl"
+    df_no_nan = dataset.df.dropna()
+    print("NaN diff:", len(dataset.df) - len(df_no_nan))
+
+    local_output_file = f"{current_dir}/dataset_STT_{len(dataset.df)}_30nh.local.csv"
+    dataset.save_dataset(local_output_file)
+
+    output_file = f"{current_dir}/dataset_STT_30nh.csv"
     dataset.save_dataset(output_file)
     

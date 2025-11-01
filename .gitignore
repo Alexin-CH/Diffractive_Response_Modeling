@@ -10,5 +10,8 @@ data-outputs/
 
 *.pkl
 *.pt
+*.json
+
+*.local*
 
 *.log

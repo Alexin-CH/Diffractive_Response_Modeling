@@ -4,6 +4,7 @@ import time
 
 import torch
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 import sintin_torcwa.rcwa as rcwa
@@ -24,8 +25,10 @@ def parse():
                         help="Amplitude of sinusoidal corrugation in nm")
     parser.add_argument("--sin_period", type=float, default=1000.0,
                         help="Period of sinusoidal corrugation in nm")
-    parser.add_argument("--filename", type=str, default="data_sim.pt",
-                        help="Output filename (default: data_sim.pt)")
+    parser.add_argument("--perm_map", type=bool, default=False,
+                        help="Create permitivitty map condition")
+    parser.add_argument("--filename", type=str, default="sample.json",
+                        help="Output filename (default: sample.pt)")
     
     args = parser.parse_args()
     return args
@@ -42,11 +45,15 @@ def main(args):
     inc_angles, azi_angles = rcwa.get_diffraction_angles(sim)
     s_params = rcwa.get_S_parameters(sim)
 
-    sample = {k: s_params[k] for k in s_params}
+    sample = {}
+    sample["wl"] = args.wl
+    sample["ang"] = args.ang
+    sample["amp"] = args.sin_amplitude
+    sample["per"] = args.sin_period
+    for k in s_params:
+        sample[k] = s_params[k]
     sample['diffraction.inc.angles'] = inc_angles
     sample['diffraction.azi.angles'] = azi_angles
-
-    # print(sample)
 
     path = filepath.split('/')[:-1]
 
@@ -57,13 +64,16 @@ def main(args):
 
     # Save permittivity map if not already saved
     perm_map_title = f"{filename.split('.')[0]}.perm_map.amp{int(amplitude)}_per{int(period)}.pt"
-    if not os.path.exists(os.path.join(out_dir, perm_map_title)):
+    if args.perm_map and not os.path.exists(os.path.join(out_dir, perm_map_title)):
         torch.save(perm_map.cpu(), os.path.join(out_dir, perm_map_title))
-        print(f"Permittivity map saved to: {os.path.join(out_dir, perm_map_title)} ({time.time()-t0:.2f}s)")
+        print(f"({time.time()-t0:.2f}s) Permittivity map saved to: {os.path.join(out_dir, perm_map_title)}")
     
     # Save simulation data
-    torch.save(sample, os.path.join(out_dir, filename))
-    print(f"({time.time()-t0:.2f}s) Sample saved to: {os.path.join(out_dir, filename)}")
+    sample = pd.DataFrame([sample])
+    output_path = os.path.join(out_dir, filename)
+
+    sample.to_json(output_path)
+    print(f"({time.time()-t0:.2f}s) Sample saved to: {output_path}")
 
 if __name__ == "__main__":
     args = parse()
