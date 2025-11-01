@@ -24,22 +24,36 @@ class RobustMSELoss(nn.Module):
 
 loss_L1 = nn.SmoothL1Loss()
 loss_L2 = nn.MSELoss()
-loss_hub = nn.HuberLoss(delta=0.1)
 loss_robust = RobustMSELoss(sigma=0.01)
 
 loss_fn = loss_L2
 
+Y_keys = [
+    'forward.transmission.xx', 'forward.transmission.yx', 'forward.transmission.xy', 
+    'forward.transmission.yy', 'forward.transmission.pp', 'forward.transmission.sp', 
+    'forward.transmission.ps', 'forward.transmission.ss', 'forward.reflection.xx', 
+    'forward.reflection.yx', 'forward.reflection.xy', 'forward.reflection.yy', 
+    'forward.reflection.pp', 'forward.reflection.sp', 'forward.reflection.ps', 
+    'forward.reflection.ss', 'backward.transmission.xx', 'backward.transmission.yx', 
+    'backward.transmission.xy', 'backward.transmission.yy', 'backward.transmission.pp', 
+    'backward.transmission.sp', 'backward.transmission.ps', 'backward.transmission.ss', 
+    'backward.reflection.xx', 'backward.reflection.yx', 'backward.reflection.xy', 
+    'backward.reflection.yy', 'backward.reflection.pp', 'backward.reflection.sp', 
+    'backward.reflection.ps', 'backward.reflection.ss'
+]
+
 def extract_from_batch(batch, device):
     # Here batch size is 1
     args = rcwa.RCWAArgs(
-        wl=1/batch['freq'].item(),
-        ang=batch['inc_ang'].item(),
-        nh=3,
+        wl=batch['wl'],
+        ang=batch['ang'],
+        nh=2,
         discretization=256,
-        sin_amplitude=55.0,
-        sin_period=1000.0
+        sin_amplitude=batch['amp'],
+        sin_period=batch['per']
     )
-    Y = torch.stack(batch['S'], dim=-1).to(device)
+    Y = torch.stack([batch[key] for key in Y_keys], dim=-1).to(device)
+    Y = torch.cat([Y.real, Y.imag], dim=-1)
     return args, Y
 
 def train_model(model, dataset, num_epochs, batch_size, learning_rate, device, lm, val_split=0.2):
@@ -77,10 +91,15 @@ def train_model(model, dataset, num_epochs, batch_size, learning_rate, device, l
         for batch_idx, batch in enumerate(tqdm_batchs):
             args, Y = extract_from_batch(batch, device)
 
-            print(Y.shape)
+            rcwa_sim, _ = rcwa.setup(args, device=device)
+            s_params = rcwa.get_S_parameters(rcwa_sim)
 
-            rcwa_results, _ = rcwa.setup(args, device=device)
-            preds = model(rcwa_results.S)
+            preds = model(s_params)
+
+            # print(type(preds), type(Y))
+            # print(preds.shape, Y.shape)
+            # print(preds.dtype, Y.dtype)
+            # exit()
 
             loss = loss_fn(preds, Y)
 
@@ -112,7 +131,8 @@ def train_model(model, dataset, num_epochs, batch_size, learning_rate, device, l
                 for val_batch in tqdm_val:
                     args, Y_val = extract_from_batch(val_batch, device)
                     rcwa_results_val, _ = rcwa.setup(args, device=device)
-                    preds_val = model(rcwa_results_val.S)
+                    s_params_val = rcwa.get_S_parameters(rcwa_results_val)
+                    preds_val = model(s_params_val)
                     val_loss = loss_fn(preds_val, Y_val)
 
                     val_losses.append(val_loss.item())

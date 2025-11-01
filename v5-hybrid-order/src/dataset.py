@@ -45,8 +45,8 @@ class OpticalSimulationDatasetPD(Dataset):
         if parent_dir and not os.path.exists(parent_dir):
             os.makedirs(parent_dir, exist_ok=True)
 
-        if not output_file.endswith('.pkl'):
-            output_file += ".pkl"
+        if not output_file.endswith('.csv'):
+            output_file += ".csv"
 
         # DataFrame may contain torch tensors; pandas will pickle them fine.
         self.df.to_pickle(output_file)
@@ -58,10 +58,15 @@ class OpticalSimulationDatasetPD(Dataset):
         return self
 
     def load_dataset(self, input_file, normalize=False):
-        if not input_file.endswith('.pkl'):
-            raise ValueError("Input file must end with .pkl")
+        if not input_file.endswith('.csv'):
+            raise ValueError("Input file must end with .csv")
 
-        self.df = pd.read_json(input_file).reset_index()
+        self.df = pd.read_csv(input_file).reset_index()
+
+        # Transmissions and reflections are stored as dict 'real', 'imag'. Convert to complex.
+        for col in tqdm(self.df.columns, desc="Loading dataset features"):
+            if col.startswith('forward') or col.startswith('backward'):
+                self.df[col] = self.df[col].apply(lambda x: complex(eval(x)['real'], eval(x)['imag']))
 
         if self.logger:
             self.logger.info(f"Loaded {len(self.df)} samples from {input_file}")

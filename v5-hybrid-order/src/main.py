@@ -9,7 +9,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from train import train_model, extract_from_batch
-from models.mlp import RCWA_MLP_Smatrix_correction
+from models.mlp import RCWA_MLP_correction
 
 from dataset import OpticalSimulationDatasetPD
 from utils import LoggerManager
@@ -49,14 +49,13 @@ def main(deterministic=False):
 
     lm.logger.info("Initializing model...")
 
-    model = RCWA_MLP_Smatrix_correction()
+    model = RCWA_MLP_correction()
 
     model = model.to(device)
 
     lm.logger.info("Loading dataset...")
     dataset = OpticalSimulationDatasetPD(
-        data_file="datasets/dataset_WAS_2400_20nh.pkl",
-        normalize=False,
+        data_file="datasets/dataset_STT_30nh.csv",
         device=device,
         logger=lm.logger
     )
