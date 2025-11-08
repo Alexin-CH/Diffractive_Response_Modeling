@@ -102,6 +102,7 @@ def train_model(model, dataset, num_epochs, batch_size, learning_rate, device, l
             # exit()
 
             loss = loss_fn(preds, Y)
+            losses.append(loss)
 
             optimizer.zero_grad()
             loss.backward()

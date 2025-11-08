@@ -49,13 +49,13 @@ def main(deterministic=False):
 
     lm.logger.info("Initializing model...")
 
-    model = RCWA_MLP_correction()
-
-    model = model.to(device)
+    model = RCWA_MLP_correction().to(device)
+    lm.logger.info(f"Total number of parameters: {model.num_params()}")
 
     lm.logger.info("Loading dataset...")
     dataset = OpticalSimulationDatasetPD(
         data_file="datasets/dataset_STT_30nh.csv",
+        num_samples=3000,
         device=device,
         logger=lm.logger
     )
@@ -63,9 +63,10 @@ def main(deterministic=False):
     list_epoch_loss, list_val_loss, model = train_model(
         model=model,
         dataset=dataset,
-        num_epochs=1e3,
+        num_epochs=1e1,
         batch_size=1,
-        learning_rate=1e-2,
+        learning_rate=1e-3,
+        val_split=0.2,
         device=device,
         lm=lm
     )
