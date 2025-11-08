@@ -38,10 +38,11 @@ def simulate_spectrum(wl_list, angle_deg=30, order=3):
             T_pol.append(abs(T0.cpu()) ** 2)
         R_list.append(R_pol)
         T_list.append(T_pol)
+
     return np.array(R_list), np.array(T_list), sim
 
 # Example: compute spectrum at 30° incidence
-wavelengths = torch.linspace(1000.0, 1700.0, 100)
+wavelengths = torch.linspace(1000.0, 1700.0, 10)
 inc_angle_deg = 30.0
 R_spec, T_spec, sim = simulate_spectrum(wavelengths, angle_deg=inc_angle_deg, order=3)
 
@@ -49,7 +50,7 @@ wavelengths = wavelengths.cpu()  # Move to CPU for plotting
 A_spec = 1.-R_spec - T_spec  # Absorption spectrum
 
 # Plot reflection and transmission vs wavelength
-if True:
+if False:
     for idx, pol in enumerate(['xx', 'yy', 'pp', 'sp', 'ps', 'ss']):
         plt.figure(figsize=(6,4))
         plt.plot(wavelengths, T_spec[:, idx], label='Transmission (T)')
@@ -61,6 +62,25 @@ if True:
         plt.legend()
         plt.grid()
         plt.show()
+
+if True:
+    diffraction_angles_in = []
+    diffraction_angles_out = []
+    for order in np.arange(0, 10):
+        angles_in = sim.diffraction_angle(orders=[order, order], layer='in')[0]
+        angles_out = sim.diffraction_angle(orders=[order, order], layer='out')[0]
+        diffraction_angles_in.append(angles_in)
+        diffraction_angles_out.append(angles_out)
+
+    plt.figure(figsize=(6,4))
+    plt.plot(np.arange(0,10), diffraction_angles_in, 'o-', label='Incident side')
+    plt.plot(np.arange(0,10), diffraction_angles_out, 's--', label='Transmission side')
+    plt.title(f"Diffraction Angles vs Order (θ={inc_angle_deg}°)")
+    plt.xlabel("Diffracted Order")
+    plt.ylabel("Diffraction Angle (degrees)")
+    plt.legend()
+    plt.grid()
+    plt.show()
 
 if False:
     # View XZ-plane fields and export
