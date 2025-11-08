@@ -31,4 +31,8 @@ class RCWA_MLP_correction(nn.Module):
         print(f"Model loaded from {file_path}")
         return self
 
+    def num_params(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
+
 # end of file
