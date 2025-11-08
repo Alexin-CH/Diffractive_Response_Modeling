@@ -67,8 +67,8 @@ if True:
     diffraction_angles_in = []
     diffraction_angles_out = []
     for order in np.arange(0, 10):
-        angles_in = sim.diffraction_angle(orders=[order, order], layer='in')[0]
-        angles_out = sim.diffraction_angle(orders=[order, order], layer='out')[0]
+        angles_in = sim.diffraction_angle(orders=[order, order], layer='in')[0].cpu()
+        angles_out = sim.diffraction_angle(orders=[order, order], layer='out')[0].cpu()
         diffraction_angles_in.append(angles_in)
         diffraction_angles_out.append(angles_out)
 

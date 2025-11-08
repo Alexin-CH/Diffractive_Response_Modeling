@@ -1,6 +1,4 @@
 import torch
-import numpy as np
-
 import torcwa
 
 class RCWAArgs:
@@ -69,7 +67,7 @@ def setup(
     X, Y = torch.meshgrid(torcwa.rcwa_geo.x,
                           torcwa.rcwa_geo.y,
                           indexing="xy")
-    h = amplitude * torch.sin(2 * np.pi * X / period) + amplitude
+    h = amplitude * torch.sin(2 * torch.pi * X / period) + amplitude
 
     def create_pattern_layer(z_mid, base):
         # Returns a mask = 1 where metal, 0 where air
@@ -96,7 +94,7 @@ def setup(
     sim.add_output_layer(eps=eps_sub)
 
     # 7.2) Incident wave and angle
-    sim.set_incident_angle(inc_ang=args.ang * np.pi/180, azi_ang=0.0)
+    sim.set_incident_angle(inc_ang=args.ang * torch.pi/180, azi_ang=0.0)
     sim.source_planewave(amplitude=[1.0, 0.0], direction="f")
 
     # 7.3) Uniform metal base layer (50 nm)
@@ -135,7 +133,7 @@ def setup(
 def get_diffraction_angles(torcwa_simulation):
     inc_angles = []
     azi_angles = []
-    orders = np.arange(10)
+    orders = torch.arange(10)
     for order in orders:
         inc_angle, azi_angle = torcwa_simulation.diffraction_angle(
             orders=[order, order],
@@ -144,7 +142,7 @@ def get_diffraction_angles(torcwa_simulation):
         )
         inc_angles.append(inc_angle)
         azi_angles.append(azi_angle)
-    return np.unique(inc_angles), np.unique(azi_angles)
+    return torch.unique(inc_angles), torch.unique(azi_angles)
 
 def get_S_parameters(torcwa_simulation):
     params = {}
