@@ -10,7 +10,7 @@ from rcwa import setup, RCWAArgs
 # Use GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def simulate_spectrum(wl_list, angle_deg=30, order=3):
+def simulate_spectrum(wl_list, angle_deg=torch.tensor(30, device=device), order=3):
     """Compute reflection and transmission spectra over wavelengths at a given angle."""
     R_list = []
     T_list = []
@@ -18,12 +18,12 @@ def simulate_spectrum(wl_list, angle_deg=30, order=3):
     for wl in tqdm_wl:
         tqdm_wl.set_description(f"Simulating λ={wl:.1f} nm")
         args = RCWAArgs(
-            wl=wl.item(),
+            wl=wl,
             ang=angle_deg,
             nh=order,
             discretization=256,
-            sin_amplitude=55.0,
-            sin_period=1000.0
+            sin_amplitude=torch.tensor(55.0, device=device),
+            sin_period=torch.tensor(1000.0, device=device)
         )
         sim, _  = setup(args=args, device = device)
         # Get Reflextion and Transmission coefficients for all polarizations
@@ -34,16 +34,20 @@ def simulate_spectrum(wl_list, angle_deg=30, order=3):
                                 port='reflection', polarization=pol, ref_order=[0,0])
             T0 = sim.S_parameters(orders=[0,0], direction='forward',
                                 port='transmission', polarization=pol, ref_order=[0,0])
-            R_pol.append(abs(R0.cpu()) ** 2)
-            T_pol.append(abs(T0.cpu()) ** 2)
+
+            R = R0.abs() ** 2
+            T = T0.abs() ** 2
+
+            R_pol.append(R.cpu())
+            T_pol.append(T.cpu())
         R_list.append(R_pol)
         T_list.append(T_pol)
 
     return np.array(R_list), np.array(T_list), sim
 
 # Example: compute spectrum at 30° incidence
-wavelengths = torch.linspace(1000.0, 1700.0, 10)
-inc_angle_deg = 30.0
+wavelengths = torch.linspace(1000., 1700., 10)
+inc_angle_deg = torch.tensor(30., device=device)
 R_spec, T_spec, sim = simulate_spectrum(wavelengths, angle_deg=inc_angle_deg, order=3)
 
 wavelengths = wavelengths.cpu()  # Move to CPU for plotting
@@ -66,7 +70,7 @@ if False:
 if True:
     diffraction_angles_in = []
     diffraction_angles_out = []
-    for order in np.arange(0, 10):
+    for order in torch.arange(0, 10):
         angles_in = sim.diffraction_angle(orders=[order, order], layer='in')[0].cpu()
         angles_out = sim.diffraction_angle(orders=[order, order], layer='out')[0].cpu()
         diffraction_angles_in.append(angles_in)

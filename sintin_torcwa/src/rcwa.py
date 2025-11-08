@@ -4,12 +4,12 @@ import torcwa
 class RCWAArgs:
     """Class to hold simulation parameters."""
     def __init__(self, wl, ang, nh, discretization, sin_amplitude, sin_period):
-        self.wl = wl
-        self.ang = ang
+        self.wl = wl.requires_grad_()
+        self.ang = ang.requires_grad_()
         self.nh = nh
         self.discretization = discretization
-        self.sin_amplitude = sin_amplitude
-        self.sin_period = sin_period
+        self.sin_amplitude = sin_amplitude.requires_grad_()
+        self.sin_period = sin_period.requires_grad_()
 
 def setup(
         args,
